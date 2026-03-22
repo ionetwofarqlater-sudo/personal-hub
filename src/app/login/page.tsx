@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Mail, Lock, LogIn, Chrome, Eye, EyeOff, Zap } from "lucide-react";
+import { Mail, Lock, LogIn, Chrome, Eye, EyeOff, Zap, Github } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -12,6 +12,8 @@ export default function LoginPage() {
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string | null>(null);
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const supabase = createClient();
   const authEnabled = !!supabase;
@@ -34,6 +36,19 @@ export default function LoginPage() {
     };
   }, [router, supabase]);
 
+  async function checkRateLimit(endpoint: string, submittedEmail: string) {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: submittedEmail }),
+    });
+
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      throw new Error(payload.error || "Тимчасово недоступно. Спробуй пізніше.");
+    }
+  }
+
   async function handleEmailAuth(e: React.FormEvent) {
     e.preventDefault();
     if (!supabase) {
@@ -42,23 +57,49 @@ export default function LoginPage() {
     }
     setLoading(true);
     setError(null);
+    setSuccess(null);
+    setPendingVerificationEmail(null);
+
+    try {
+      if (mode === "signin") {
+        await checkRateLimit("/api/auth/rate/login", email);
+      }
+    } catch (rateLimitError) {
+      setLoading(false);
+      setError(rateLimitError instanceof Error ? rateLimitError.message : "Забагато спроб входу.");
+      return;
+    }
+
     const action = mode === "signin"
       ? supabase.auth.signInWithPassword({ email, password })
-      : supabase.auth.signUp({ email, password, options: { emailRedirectTo: `${location.origin}/dashboard` } });
+      : supabase.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: `${location.origin}/auth/callback?next=/dashboard` }
+      });
     const { error } = await action;
-    if (error) setError(error.message);
-    else if (mode === "signin") window.location.href = "/dashboard";
-    else setError("Перевір пошту для підтвердження реєстрації!");
+    if (error) {
+      setError(error.message);
+      if (mode === "signin" && /confirm|verified|email/i.test(error.message)) {
+        setPendingVerificationEmail(email.trim());
+      }
+    } else if (mode === "signin") {
+      window.location.href = "/dashboard";
+    } else {
+      const normalizedEmail = email.trim();
+      setPendingVerificationEmail(normalizedEmail);
+      setSuccess("Майже готово! Перевір пошту і підтверди email.");
+    }
     setLoading(false);
   }
 
-  async function handleGoogle() {
+  async function handleOAuth(provider: "google" | "github") {
     if (!supabase) {
-      setError("Налаштуй Supabase у `.env.local`, щоб увійти через Google.");
+      setError("Налаштуй Supabase у `.env.local`, щоб увійти через OAuth.");
       return;
     }
     await supabase.auth.signInWithOAuth({
-      provider: "google",
+      provider,
       options: { redirectTo: `${location.origin}/auth/callback` }
     });
   }
@@ -95,15 +136,26 @@ export default function LoginPage() {
             </div>
           )}
 
+          {success && (
+            <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 rounded-xl px-4 py-3 text-sm mb-4">
+              {success}
+            </div>
+          )}
+
           {!authEnabled && (
             <div className="bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-xl px-4 py-3 text-sm mb-4">
               Supabase не налаштований. Додай валідні `NEXT_PUBLIC_SUPABASE_URL` і `NEXT_PUBLIC_SUPABASE_ANON_KEY` у `.env.local`.
             </div>
           )}
 
-          <button onClick={handleGoogle} disabled={!authEnabled} className="w-full flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 border border-gray-700 hover:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl px-4 py-3 font-medium transition-all duration-200 mb-4">
+          <button onClick={() => handleOAuth("google")} disabled={!authEnabled} className="w-full flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 border border-gray-700 hover:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl px-4 py-3 font-medium transition-all duration-200 mb-3">
             <Chrome className="w-5 h-5" />
             Увійти через Google
+          </button>
+
+          <button onClick={() => handleOAuth("github")} disabled={!authEnabled} className="w-full flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 border border-gray-700 hover:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl px-4 py-3 font-medium transition-all duration-200 mb-4">
+            <Github className="w-5 h-5" />
+            Увійти через GitHub
           </button>
 
           <div className="flex items-center gap-3 mb-4">
@@ -146,9 +198,18 @@ export default function LoginPage() {
             )}
           </form>
 
+          {pendingVerificationEmail && (
+            <div className="mt-4 bg-blue-500/10 border border-blue-500/30 text-blue-200 rounded-xl px-4 py-3 text-sm">
+              Пошта не підтверджена?{" "}
+              <Link href={`/auth/verify-email?email=${encodeURIComponent(pendingVerificationEmail)}`} className="underline underline-offset-2 hover:text-blue-100">
+                Надіслати лист підтвердження ще раз
+              </Link>
+            </div>
+          )}
+
           <p className="text-center text-gray-500 text-sm mt-4">
             {mode === "signin" ? "Немає акаунту? " : "Вже є акаунт? "}
-            <button onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setError(null); }} className="text-violet-400 hover:text-violet-300 font-medium transition-colors">
+            <button onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setError(null); setSuccess(null); setPendingVerificationEmail(null); }} className="text-violet-400 hover:text-violet-300 font-medium transition-colors">
               {mode === "signin" ? "Зареєструватися" : "Увійти"}
             </button>
           </p>

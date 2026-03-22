@@ -25,6 +25,19 @@ export default function ForgotPasswordPage() {
     setError(null);
     setSuccess(null);
 
+    const rateResponse = await fetch("/api/auth/rate/forgot-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+
+    if (!rateResponse.ok) {
+      const payload = (await rateResponse.json().catch(() => ({}))) as { error?: string };
+      setError(payload.error || "Забагато запитів. Спробуй пізніше.");
+      setLoading(false);
+      return;
+    }
+
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${location.origin}/update-password`
     });

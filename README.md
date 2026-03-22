@@ -6,7 +6,7 @@
 - **Next.js 14** (App Router)
 - **Tailwind CSS**
 - **Lucide React**
-- **Supabase** (Auth: Google + Email)
+- **Supabase** (Auth: Email + Google + GitHub + MFA TOTP)
 
 ## Швидкий старт
 
@@ -23,18 +23,36 @@ cp .env.local.example .env.local
 - `NEXT_PUBLIC_SUPABASE_URL` — URL твого Supabase проєкту
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — Anon Key з Supabase
 - `NEXT_PUBLIC_OPENWEATHER_API_KEY` — ключ з openweathermap.org (безкоштовно)
+- `NEXT_PUBLIC_SITE_URL` — базовий URL сайту (`http://localhost:3000` для локалки)
 
 ### 3. Налаштування Supabase
 У Supabase Dashboard:
-1. **Authentication → Providers** → увімкни Google (додай Client ID та Secret)
+1. **Authentication → Providers** → увімкни Google і GitHub (додай Client ID та Secret)
 2. **Authentication → URL Configuration**:
    - Site URL: `http://localhost:3000` (dev) або твій Vercel URL
    - Redirect URLs: додай `http://localhost:3000/auth/callback`
+3. (Опційно) **Authentication → Multi-Factor Auth** → дозволити TOTP
 
 ### 4. Запуск
 ```bash
 npm run dev
 ```
+
+### 5. P0 перевірки безпеки
+```bash
+npm run check:p0
+```
+
+Команда перевіряє:
+- у клієнтських компонентах використовуються лише `NEXT_PUBLIC_*` змінні;
+- Supabase REST endpoint повертає CORS заголовок для `NEXT_PUBLIC_SITE_URL`.
+
+## Supabase SQL (RLS + таблиці)
+
+Додано міграцію:
+- `supabase/migrations/20260323_000001_p0_saved_admin_rls.sql`
+
+Вона створює таблиці `saved_items`, `user_settings`, `user_roles`, `admin_audit_logs` і явні RLS policy для `SELECT / INSERT / UPDATE / DELETE`.
 
 ## Деплой на Vercel
 ```bash

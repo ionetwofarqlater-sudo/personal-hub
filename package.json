@@ -7,6 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "check:client-env": "node scripts/check-client-env.mjs",
+    "check:supabase-cors": "node scripts/check-supabase-cors.mjs",
+    "check:p0": "npm run check:client-env && npm run check:supabase-cors",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepare": "husky"

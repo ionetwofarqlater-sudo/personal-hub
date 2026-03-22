@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Cloud, FileText, Settings, Plus } from "lucide-react";
+import { Cloud, FileText, Settings, Plus, UserCircle2 } from "lucide-react";
 
 const apps = [
   {
@@ -30,6 +30,15 @@ const apps = [
     icon: Settings,
     gradient: "from-gray-500 to-gray-400",
     glow: "shadow-gray-500/20"
+  },
+  {
+    id: "profile",
+    name: "Профіль",
+    description: "Профіль та безпека",
+    href: "/dashboard/profile",
+    icon: UserCircle2,
+    gradient: "from-violet-500 to-fuchsia-400",
+    glow: "shadow-violet-500/20"
   }
 ];
 
