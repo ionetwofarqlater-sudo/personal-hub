@@ -8,14 +8,30 @@ function isValidHttpUrl(value: string | undefined) {
   }
 }
 
+function normalizeEnvValue(value: string | undefined) {
+  if (!value) return "";
+
+  let normalized = value.trim();
+
+  if (
+    (normalized.startsWith('"') && normalized.endsWith('"')) ||
+    (normalized.startsWith("'") && normalized.endsWith("'"))
+  ) {
+    normalized = normalized.slice(1, -1);
+  }
+
+  normalized = normalized.replace(/\\r\\n|\\n|\\r/g, "").trim();
+  return normalized;
+}
+
 export type SupabaseEnv = {
   url: string;
   anonKey: string;
 };
 
 export function getSupabaseEnv(): SupabaseEnv | null {
-  const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const rawAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const rawUrl = normalizeEnvValue(process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const rawAnonKey = normalizeEnvValue(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 
   if (!rawUrl || !isValidHttpUrl(rawUrl)) return null;
   if (!rawAnonKey || rawAnonKey.includes("your_supabase_anon_key")) return null;
