@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowLeft, MailCheck, RefreshCw, Zap } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { getSupabaseRateLimitHint, isSupabaseEmailRateLimitError } from "@/lib/auth/supabaseErrors";
 
 export default function VerifyEmailPage() {
   const [email, setEmail] = useState("");
@@ -41,7 +42,11 @@ export default function VerifyEmailPage() {
     const payload = (await response.json().catch(() => ({}))) as { error?: string };
 
     if (!response.ok) {
-      setError(payload.error || "Не вдалося повторно відправити лист.");
+      if (isSupabaseEmailRateLimitError(payload.error)) {
+        setSuccess(getSupabaseRateLimitHint());
+      } else {
+        setError(payload.error || "Не вдалося повторно відправити лист.");
+      }
     } else {
       setSuccess("Лист підтвердження повторно надіслано. Перевір пошту.");
     }

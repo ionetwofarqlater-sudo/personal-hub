@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Mail, Lock, LogIn, Chrome, Eye, EyeOff, Zap, Github } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { getSupabaseRateLimitHint, isSupabaseEmailRateLimitError } from "@/lib/auth/supabaseErrors";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -95,6 +96,14 @@ export default function LoginPage() {
       });
     const { data, error } = await action;
     if (error) {
+      if (mode === "signup" && isSupabaseEmailRateLimitError(error.message)) {
+        const normalizedEmail = email.trim();
+        setPendingVerificationEmail(normalizedEmail);
+        setSuccess(getSupabaseRateLimitHint());
+        setLoading(false);
+        return;
+      }
+
       setError(error.message);
       if (mode === "signin" && /confirm|verified|email/i.test(error.message)) {
         setPendingVerificationEmail(email.trim());

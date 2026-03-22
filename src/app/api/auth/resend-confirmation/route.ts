@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { getSupabaseEnv } from "@/lib/supabase/env";
 import { getClientIp, takeRateLimitToken } from "@/lib/auth/rateLimit";
+import { isSupabaseEmailRateLimitError } from "@/lib/auth/supabaseErrors";
 
 export async function POST(request: Request) {
   const env = getSupabaseEnv();
@@ -63,7 +64,8 @@ export async function POST(request: Request) {
         });
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    const status = isSupabaseEmailRateLimitError(error.message) ? 429 : 400;
+    return NextResponse.json({ error: error.message }, { status });
   }
 
   return NextResponse.json({ ok: true });

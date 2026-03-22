@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { ArrowLeft, Mail, Send, Zap } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { getSupabaseRateLimitHint, isSupabaseEmailRateLimitError } from "@/lib/auth/supabaseErrors";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -48,7 +49,12 @@ export default function ForgotPasswordPage() {
     });
 
     if (error) {
-      setError(error.message);
+      if (isSupabaseEmailRateLimitError(error.message)) {
+        setCodeSent(true);
+        setSuccess(getSupabaseRateLimitHint());
+      } else {
+        setError(error.message);
+      }
     } else {
       setCodeSent(true);
       setSuccess("Код для відновлення надіслано. Введи його нижче.");
@@ -135,7 +141,11 @@ export default function ForgotPasswordPage() {
 
     const payload = (await response.json().catch(() => ({}))) as { error?: string };
     if (!response.ok) {
-      setError(payload.error || "Не вдалося повторно надіслати код.");
+      if (isSupabaseEmailRateLimitError(payload.error)) {
+        setSuccess(getSupabaseRateLimitHint());
+      } else {
+        setError(payload.error || "Не вдалося повторно надіслати код.");
+      }
     } else {
       setSuccess("Код для відновлення повторно надіслано.");
     }
