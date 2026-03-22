@@ -11,6 +11,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [verifyingCode, setVerifyingCode] = useState(false);
+  const [verificationCode, setVerificationCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [pendingVerificationEmail, setPendingVerificationEmail] = useState<string | null>(null);
@@ -89,7 +91,7 @@ export default function LoginPage() {
       : supabase.auth.signUp({
         email,
         password,
-        options: { emailRedirectTo: `${location.origin}/auth/callback?next=/dashboard` }
+        options: { emailRedirectTo: `${location.origin}/auth/callback?next=/dashboard` },
       });
     const { data, error } = await action;
     if (error) {
@@ -109,9 +111,57 @@ export default function LoginPage() {
 
       const normalizedEmail = email.trim();
       setPendingVerificationEmail(normalizedEmail);
-      setSuccess("Майже готово! Перевір пошту і підтверди email.");
+      setSuccess("Код підтвердження надіслано на email. Введи його нижче.");
     }
     setLoading(false);
+  }
+
+  async function handleVerifySignupCode() {
+    if (!supabase) {
+      setError("Налаштуй Supabase у `.env.local`, щоб підтвердити код.");
+      return;
+    }
+
+    if (!pendingVerificationEmail?.trim()) {
+      setError("Не знайдено email для підтвердження.");
+      return;
+    }
+
+    if (!verificationCode.trim()) {
+      setError("Введи код з листа.");
+      return;
+    }
+
+    setVerifyingCode(true);
+    setError(null);
+    setSuccess(null);
+
+    const { error: verifyError } = await supabase.auth.verifyOtp({
+      email: pendingVerificationEmail.trim(),
+      token: verificationCode.trim(),
+      type: "signup",
+    });
+
+    if (verifyError) {
+      setError(verifyError.message);
+      setVerifyingCode(false);
+      return;
+    }
+
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: pendingVerificationEmail.trim(),
+      password,
+    });
+
+    if (signInError) {
+      setSuccess("Код підтверджено. Тепер увійди в акаунт.");
+      setMode("signin");
+      setVerificationCode("");
+      setVerifyingCode(false);
+      return;
+    }
+
+    window.location.href = "/dashboard";
   }
 
   async function handleOAuth(provider: "google" | "github") {
@@ -221,9 +271,29 @@ export default function LoginPage() {
 
           {pendingVerificationEmail && (
             <div className="mt-4 bg-blue-500/10 border border-blue-500/30 text-blue-200 rounded-xl px-4 py-3 text-sm">
-              Пошта не підтверджена?{" "}
+              <p className="mb-3">Підтвердження через код (OTP)</p>
+
+              <div className="flex flex-col sm:flex-row gap-2 mb-2">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={verificationCode}
+                  onChange={(event) => setVerificationCode(event.target.value.replace(/\s+/g, ""))}
+                  placeholder="Введи код з email"
+                  className="flex-1 bg-gray-900/70 border border-gray-700 focus:border-violet-500 text-white placeholder-gray-500 rounded-xl px-3 py-2 text-sm outline-none transition-colors"
+                />
+                <button
+                  type="button"
+                  onClick={handleVerifySignupCode}
+                  disabled={verifyingCode || !authEnabled}
+                  className="bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl px-4 py-2 text-sm font-medium"
+                >
+                  {verifyingCode ? "Перевіряємо..." : "Підтвердити код"}
+                </button>
+              </div>
+
               <Link href={`/auth/verify-email?email=${encodeURIComponent(pendingVerificationEmail)}`} className="underline underline-offset-2 hover:text-blue-100">
-                Надіслати лист підтвердження ще раз
+                Надіслати код ще раз
               </Link>
             </div>
           )}

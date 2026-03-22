@@ -8,6 +8,11 @@ import { createClient } from "@/lib/supabase/client";
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [code, setCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [codeSent, setCodeSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -42,8 +47,98 @@ export default function ForgotPasswordPage() {
       redirectTo: `${location.origin}/update-password`
     });
 
-    if (error) setError(error.message);
-    else setSuccess("Лист для відновлення пароля відправлено. Перевір пошту.");
+    if (error) {
+      setError(error.message);
+    } else {
+      setCodeSent(true);
+      setSuccess("Код для відновлення надіслано. Введи його нижче.");
+    }
+
+    setLoading(false);
+  }
+
+  async function handleVerifyCodeAndUpdatePassword(e: React.FormEvent) {
+    e.preventDefault();
+
+    if (!supabase) {
+      setError("Налаштуй Supabase у `.env.local`, щоб змінити пароль.");
+      return;
+    }
+
+    if (!email.trim() || !code.trim()) {
+      setError("Вкажи email і код з листа.");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setError("Пароль має містити мінімум 6 символів.");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError("Паролі не співпадають.");
+      return;
+    }
+
+    setVerifying(true);
+    setError(null);
+    setSuccess(null);
+
+    const { error: verifyError } = await supabase.auth.verifyOtp({
+      email: email.trim(),
+      token: code.trim(),
+      type: "recovery",
+    });
+
+    if (verifyError) {
+      setError(verifyError.message);
+      setVerifying(false);
+      return;
+    }
+
+    const { error: updateError } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+
+    if (updateError) {
+      setError(updateError.message);
+      setVerifying(false);
+      return;
+    }
+
+    setSuccess("Пароль оновлено. Тепер увійди з новим паролем.");
+    setCode("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setVerifying(false);
+  }
+
+  async function handleResendCode() {
+    if (!email.trim()) {
+      setError("Спочатку вкажи email.");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    const response = await fetch("/api/auth/resend-confirmation", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: email.trim(),
+        origin: location.origin,
+        type: "recovery",
+      }),
+    });
+
+    const payload = (await response.json().catch(() => ({}))) as { error?: string };
+    if (!response.ok) {
+      setError(payload.error || "Не вдалося повторно надіслати код.");
+    } else {
+      setSuccess("Код для відновлення повторно надіслано.");
+    }
 
     setLoading(false);
   }
@@ -62,7 +157,7 @@ export default function ForgotPasswordPage() {
             </div>
           </div>
 
-          <p className="text-gray-400 text-sm mb-6">Введи email, і ми надішлемо посилання для скидання пароля.</p>
+          <p className="text-gray-400 text-sm mb-6">Введи email, і ми надішлемо код для скидання пароля.</p>
 
           {error && <div className="bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl px-4 py-3 text-sm mb-4">{error}</div>}
           {success && <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 rounded-xl px-4 py-3 text-sm mb-4">{success}</div>}
@@ -92,9 +187,61 @@ export default function ForgotPasswordPage() {
               className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl px-4 py-3 font-medium transition-all duration-200 shadow-lg shadow-violet-500/20"
             >
               <Send className="w-4 h-4" />
-              {loading ? "Надсилаємо..." : "Надіслати посилання"}
+              {loading ? "Надсилаємо..." : "Надіслати код"}
             </button>
           </form>
+
+          {codeSent && (
+            <form onSubmit={handleVerifyCodeAndUpdatePassword} className="space-y-4 mt-6 border-t border-gray-800 pt-5">
+              <p className="text-sm text-blue-200">Введи код з email і встанови новий пароль.</p>
+
+              <input
+                type="text"
+                value={code}
+                onChange={(event) => setCode(event.target.value.replace(/\s+/g, ""))}
+                placeholder="Код з листа"
+                required
+                className="w-full bg-gray-800/50 border border-gray-700 focus:border-violet-500 text-white placeholder-gray-500 rounded-xl px-3 py-3 text-sm outline-none transition-colors"
+              />
+
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(event) => setNewPassword(event.target.value)}
+                placeholder="Новий пароль"
+                minLength={6}
+                required
+                className="w-full bg-gray-800/50 border border-gray-700 focus:border-violet-500 text-white placeholder-gray-500 rounded-xl px-3 py-3 text-sm outline-none transition-colors"
+              />
+
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                placeholder="Підтверди новий пароль"
+                minLength={6}
+                required
+                className="w-full bg-gray-800/50 border border-gray-700 focus:border-violet-500 text-white placeholder-gray-500 rounded-xl px-3 py-3 text-sm outline-none transition-colors"
+              />
+
+              <button
+                type="submit"
+                disabled={verifying || !authEnabled}
+                className="w-full flex items-center justify-center gap-2 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl px-4 py-3 font-medium transition-all duration-200"
+              >
+                {verifying ? "Перевіряємо..." : "Підтвердити код і змінити пароль"}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleResendCode}
+                disabled={loading || !authEnabled}
+                className="w-full flex items-center justify-center gap-2 bg-transparent border border-gray-700 hover:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-gray-200 rounded-xl px-4 py-3 font-medium transition-all duration-200"
+              >
+                {loading ? "Надсилаємо..." : "Надіслати код ще раз"}
+              </button>
+            </form>
+          )}
 
           <Link href="/login" className="mt-5 inline-flex items-center gap-2 text-sm text-gray-400 hover:text-white transition-colors">
             <ArrowLeft className="w-4 h-4" />

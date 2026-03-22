@@ -3,12 +3,16 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowLeft, MailCheck, RefreshCw, Zap } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
 
 export default function VerifyEmailPage() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const supabase = createClient();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -31,7 +35,7 @@ export default function VerifyEmailPage() {
     const response = await fetch("/api/auth/resend-confirmation", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: email.trim(), origin: location.origin }),
+      body: JSON.stringify({ email: email.trim(), origin: location.origin, type: "signup" }),
     });
 
     const payload = (await response.json().catch(() => ({}))) as { error?: string };
@@ -43,6 +47,38 @@ export default function VerifyEmailPage() {
     }
 
     setLoading(false);
+  }
+
+  async function handleVerifyCode() {
+    if (!supabase) {
+      setError("Налаштуй Supabase у `.env.local`, щоб підтвердити код.");
+      return;
+    }
+
+    if (!email.trim() || !code.trim()) {
+      setError("Вкажи email і код з листа.");
+      return;
+    }
+
+    setVerifying(true);
+    setError(null);
+    setSuccess(null);
+
+    const { error: verifyError } = await supabase.auth.verifyOtp({
+      email: email.trim(),
+      token: code.trim(),
+      type: "signup",
+    });
+
+    if (verifyError) {
+      setError(verifyError.message);
+      setVerifying(false);
+      return;
+    }
+
+    setSuccess("Email успішно підтверджено. Тепер можеш увійти.");
+    setCode("");
+    setVerifying(false);
   }
 
   return (
@@ -62,7 +98,7 @@ export default function VerifyEmailPage() {
           <div className="bg-blue-500/10 border border-blue-500/30 text-blue-200 rounded-xl px-4 py-3 text-sm mb-4 flex items-start gap-2">
             <MailCheck className="w-4 h-4 mt-0.5" />
             <p>
-              Ми надіслали лист підтвердження. Відкрий inbox і перейди за посиланням, щоб активувати акаунт.
+              Ми надіслали лист з кодом підтвердження. Введи код нижче, щоб активувати акаунт.
             </p>
           </div>
 
@@ -89,6 +125,26 @@ export default function VerifyEmailPage() {
                 className="w-full bg-gray-800/50 border border-gray-700 focus:border-violet-500 text-white placeholder-gray-500 rounded-xl px-3 py-2.5 text-sm outline-none transition-colors"
               />
             </label>
+
+            <label className="space-y-2 block">
+              <span className="text-sm text-gray-300">Код підтвердження</span>
+              <input
+                type="text"
+                value={code}
+                onChange={(event) => setCode(event.target.value.replace(/\s+/g, ""))}
+                placeholder="Введи код з email"
+                className="w-full bg-gray-800/50 border border-gray-700 focus:border-violet-500 text-white placeholder-gray-500 rounded-xl px-3 py-2.5 text-sm outline-none transition-colors"
+              />
+            </label>
+
+            <button
+              type="button"
+              onClick={handleVerifyCode}
+              disabled={verifying}
+              className="w-full inline-flex items-center justify-center gap-2 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl px-4 py-2.5 text-sm font-medium transition-colors"
+            >
+              {verifying ? "Перевіряємо..." : "Підтвердити код"}
+            </button>
 
             <button
               type="button"

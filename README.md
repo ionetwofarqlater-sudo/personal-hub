@@ -33,6 +33,13 @@ cp .env.local.example .env.local
    - Redirect URLs: додай `http://localhost:3000/auth/callback`
 3. (Опційно) **Authentication → Multi-Factor Auth** → дозволити TOTP
 
+### 3.1 OTP-коди для реєстрації/відновлення
+- Реєстрація та відновлення підтримують підтвердження **по коду з email** (без обовʼязкового переходу за посиланням).
+- Для гарних листів відкрий **Authentication → Email Templates** і встав:
+   - `supabase/email-templates/signup-otp.html` у шаблон підтвердження signup
+   - `supabase/email-templates/recovery-otp.html` у шаблон recovery/reset
+- У шаблонах лишай `{{ .Token }}` (код) і `{{ .ConfirmationURL }}` (fallback-посилання).
+
 ### 4. Запуск
 ```bash
 npm run dev

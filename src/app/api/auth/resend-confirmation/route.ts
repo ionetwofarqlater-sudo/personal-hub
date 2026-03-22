@@ -12,8 +12,13 @@ export async function POST(request: Request) {
     );
   }
 
-  const body = (await request.json().catch(() => ({}))) as { email?: string; origin?: string };
+  const body = (await request.json().catch(() => ({}))) as {
+    email?: string;
+    origin?: string;
+    type?: "signup" | "recovery";
+  };
   const email = body.email?.trim().toLowerCase();
+  const type = body.type === "recovery" ? "recovery" : "signup";
 
   if (!email) {
     return NextResponse.json({ error: "Email обов'язковий." }, { status: 400 });
@@ -21,7 +26,7 @@ export async function POST(request: Request) {
 
   const ip = getClientIp(request);
   const limit = takeRateLimitToken({
-    key: `auth:resend-confirmation:${ip}:${email}`,
+    key: `auth:resend-confirmation:${type}:${ip}:${email}`,
     maxRequests: 5,
     windowMs: 15 * 60 * 1000,
   });
@@ -44,13 +49,18 @@ export async function POST(request: Request) {
     ? body.origin
     : process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
-  const { error } = await supabase.auth.resend({
-    type: "signup",
-    email,
-    options: {
-      emailRedirectTo: `${origin}/auth/callback?next=/dashboard`,
-    },
-  });
+  const { error } =
+    type === "recovery"
+      ? await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${origin}/update-password`,
+        })
+      : await supabase.auth.resend({
+          type: "signup",
+          email,
+          options: {
+            emailRedirectTo: `${origin}/auth/callback?next=/dashboard`,
+          },
+        });
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
