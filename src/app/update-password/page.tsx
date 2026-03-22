@@ -22,6 +22,20 @@ export default function UpdatePasswordPage() {
 
     async function checkSession() {
       if (!supabase) return;
+
+      const hash = window.location.hash;
+      const hashParams = new URLSearchParams(hash.startsWith("#") ? hash.slice(1) : hash);
+      const type = hashParams.get("type");
+      const accessToken = hashParams.get("access_token");
+      const refreshToken = hashParams.get("refresh_token");
+
+      if (type === "recovery" && accessToken && refreshToken) {
+        await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+      }
+
       const { data } = await supabase.auth.getSession();
       if (active) {
         setHasSession(!!data.session);

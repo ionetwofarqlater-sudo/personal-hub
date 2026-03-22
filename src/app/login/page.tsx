@@ -20,6 +20,20 @@ export default function LoginPage() {
   const router = useRouter();
 
   useEffect(() => {
+    const hash = window.location.hash;
+    const search = new URLSearchParams(window.location.search);
+
+    const hashParams = new URLSearchParams(hash.startsWith("#") ? hash.slice(1) : hash);
+    const hashType = hashParams.get("type");
+    const searchType = search.get("type");
+    const flowType = hashType || searchType;
+
+    if (flowType === "recovery") {
+      const hashSuffix = hash ? hash : "";
+      router.replace(`/update-password${hashSuffix}`);
+      return;
+    }
+
     let active = true;
 
     async function checkSession() {
@@ -77,7 +91,7 @@ export default function LoginPage() {
         password,
         options: { emailRedirectTo: `${location.origin}/auth/callback?next=/dashboard` }
       });
-    const { error } = await action;
+    const { data, error } = await action;
     if (error) {
       setError(error.message);
       if (mode === "signin" && /confirm|verified|email/i.test(error.message)) {
@@ -86,6 +100,13 @@ export default function LoginPage() {
     } else if (mode === "signin") {
       window.location.href = "/dashboard";
     } else {
+      const identities = data?.user?.identities;
+      if (Array.isArray(identities) && identities.length === 0) {
+        setError("Ця пошта вже зареєстрована. Увійди або віднови пароль.");
+        setLoading(false);
+        return;
+      }
+
       const normalizedEmail = email.trim();
       setPendingVerificationEmail(normalizedEmail);
       setSuccess("Майже готово! Перевір пошту і підтверди email.");
