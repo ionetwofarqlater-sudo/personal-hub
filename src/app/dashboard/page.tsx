@@ -1,6 +1,6 @@
 import AppGrid from "@/components/dashboard/AppGrid";
 import Link from "next/link";
-import { PlusSquare, Cloud, FileText, UserCircle2 } from "lucide-react";
+import { PlusSquare, Cloud, FileText, UserCircle2, Shield } from "lucide-react";
 
 export default function DashboardPage() {
   return (
@@ -53,6 +53,19 @@ export default function DashboardPage() {
             <div>
               <p className="text-white text-sm font-medium">Профіль і безпека</p>
               <p className="text-gray-500 text-xs">Керувати акаунтом, паролем і сесіями</p>
+            </div>
+          </Link>
+
+          <Link
+            href="/dashboard/admin"
+            className="flex items-center gap-3 rounded-xl border border-gray-700 bg-gray-800/40 hover:bg-gray-800/70 px-4 py-3 transition-colors"
+          >
+            <div className="w-9 h-9 rounded-lg bg-red-500/20 text-red-300 flex items-center justify-center">
+              <Shield className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-white text-sm font-medium">Admin Dashboard</p>
+              <p className="text-gray-500 text-xs">Доступно лише для користувачів з роллю admin</p>
             </div>
           </Link>
         </div>

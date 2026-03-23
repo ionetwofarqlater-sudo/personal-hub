@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getSupabaseEnv } from "@/lib/supabase/env";
+import { isUserAdmin } from "@/lib/auth/roles";
 
 export async function middleware(request: NextRequest) {
   const env = getSupabaseEnv();
@@ -28,6 +29,17 @@ export async function middleware(request: NextRequest) {
   );
 
   const { data: { user } } = await supabase.auth.getUser();
+
+  if (request.nextUrl.pathname.startsWith("/dashboard/admin")) {
+    if (!user) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+
+    const admin = await isUserAdmin(supabase, user.id);
+    if (!admin) {
+      return NextResponse.redirect(new URL("/403", request.url));
+    }
+  }
 
   if (user && request.nextUrl.pathname === "/login") {
     return NextResponse.redirect(new URL("/dashboard", request.url));
