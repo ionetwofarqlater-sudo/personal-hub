@@ -8,11 +8,25 @@ import SavedFilters from "./components/SavedFilters";
 import SavedSearchBar from "./components/SavedSearchBar";
 import { useSavedItems } from "./hooks/useSavedItems";
 import { useSavedSearch } from "./hooks/useSavedSearch";
+import { createClient } from "@/lib/supabase/client";
 import type { SavedItem } from "@/types/domain";
 
 type Props = { initialItems: SavedItem[]; userId: string; dbError?: string | null };
 
-export default function SavedClient({ initialItems, userId, dbError }: Props) {
+export default function SavedClient({ initialItems, userId: initialUserId, dbError }: Props) {
+  const [userId, setUserId] = useState(initialUserId);
+
+  // Fallback: SSR auth failed — resolve userId on the client
+  useEffect(() => {
+    if (initialUserId) return;
+    const supabase = createClient();
+    if (!supabase) return;
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) setUserId(data.user.id);
+      else window.location.replace("/login");
+    });
+  }, [initialUserId]);
+
   // "Connecting…" shimmer — show briefly on cold cloud start so users see
   // something is happening rather than a blank screen.
   const [connecting, setConnecting] = useState(initialItems.length === 0 && !dbError);
