@@ -33,7 +33,7 @@ export default function WeatherWidget() {
       setLoading(true);
       setError(false);
 
-      const apiKey = process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY?.trim();
+      const apiKey = process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY?.replace(/[\r\n]/g, "").trim();
       const language = locale.startsWith("uk") ? "uk" : "en";
 
       if (!apiKey || apiKey === "your_openweathermap_api_key") {
