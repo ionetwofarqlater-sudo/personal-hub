@@ -1,12 +1,12 @@
 {
   "name": "personal-hub",
-  "version": "0.1.7",
+  "version": "0.1.10",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint --dir .",
+    "lint": "next lint .",
     "check:client-env": "node scripts/check-client-env.mjs",
     "check:supabase-cors": "node scripts/check-supabase-cors.mjs",
     "check:p0": "npm run check:client-env && npm run check:supabase-cors",

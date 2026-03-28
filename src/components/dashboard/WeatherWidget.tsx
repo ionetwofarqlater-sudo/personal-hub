@@ -37,19 +37,6 @@ export default function WeatherWidget() {
       const apiKey = rawKey.replace(/[\r\n]/g, "").trim();
       const language = locale.startsWith("uk") ? "uk" : "en";
 
-      console.debug(
-        "[WeatherWidget] rawKey length:",
-        rawKey.length,
-        "| codes:",
-        Array.from(rawKey).map((c) => c.charCodeAt(0))
-      );
-      console.debug(
-        "[WeatherWidget] apiKey after clean:",
-        JSON.stringify(apiKey),
-        "| length:",
-        apiKey.length
-      );
-
       if (!apiKey || apiKey === "your_openweathermap_api_key") {
         setWeather({
           temp: 18,
@@ -63,12 +50,8 @@ export default function WeatherWidget() {
 
       try {
         const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${apiKey}&units=metric&lang=${language}`;
-        console.debug("[WeatherWidget] fetching URL:", url);
         const res = await fetch(url);
         if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          console.error("[WeatherWidget] API error", res.status, body);
-          console.error("[WeatherWidget] URL was:", url);
           throw new Error(`${res.status}`);
         }
         const data = await res.json();
@@ -78,8 +61,7 @@ export default function WeatherWidget() {
           icon: data.weather[0].icon,
           city: data.name || city
         });
-      } catch (e) {
-        console.error("[WeatherWidget] fetch failed", e);
+      } catch {
         setError(true);
       } finally {
         setLoading(false);

@@ -1,10 +1,24 @@
 node_modules/
 .next/
-.env.local
 .vercel/
 .DS_Store
 coverage/
 dist/
 build/
-.vercel
+out/
+
+# env files
+.env
 .env*.local
+.env.production
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# OS
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
