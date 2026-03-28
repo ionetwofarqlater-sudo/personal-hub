@@ -57,7 +57,7 @@ export default function LoginPage() {
     const response = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: submittedEmail }),
+      body: JSON.stringify({ email: submittedEmail })
     });
 
     if (!response.ok) {
@@ -87,13 +87,14 @@ export default function LoginPage() {
       return;
     }
 
-    const action = mode === "signin"
-      ? supabase.auth.signInWithPassword({ email, password })
-      : supabase.auth.signUp({
-        email,
-        password,
-        options: { emailRedirectTo: `${location.origin}/auth/callback?next=/dashboard` },
-      });
+    const action =
+      mode === "signin"
+        ? supabase.auth.signInWithPassword({ email, password })
+        : supabase.auth.signUp({
+            email,
+            password,
+            options: { emailRedirectTo: `${location.origin}/auth/callback?next=/dashboard` }
+          });
     const { data, error } = await action;
     if (error) {
       if (mode === "signup" && isSupabaseEmailRateLimitError(error.message)) {
@@ -148,7 +149,7 @@ export default function LoginPage() {
     const { error: verifyError } = await supabase.auth.verifyOtp({
       email: pendingVerificationEmail.trim(),
       token: verificationCode.trim(),
-      type: "signup",
+      type: "signup"
     });
 
     if (verifyError) {
@@ -159,7 +160,7 @@ export default function LoginPage() {
 
     const { error: signInError } = await supabase.auth.signInWithPassword({
       email: pendingVerificationEmail.trim(),
-      password,
+      password
     });
 
     if (signInError) {
@@ -185,7 +186,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
+    <div className="min-h-dvh bg-gray-950 flex items-center justify-center p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-96 h-96 bg-violet-600/20 rounded-full blur-3xl" />
         <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl" />
@@ -224,16 +225,25 @@ export default function LoginPage() {
 
           {!authEnabled && (
             <div className="bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-xl px-4 py-3 text-sm mb-4">
-              Supabase не налаштований. Додай валідні `NEXT_PUBLIC_SUPABASE_URL` і `NEXT_PUBLIC_SUPABASE_ANON_KEY` у `.env.local`.
+              Supabase не налаштований. Додай валідні `NEXT_PUBLIC_SUPABASE_URL` і
+              `NEXT_PUBLIC_SUPABASE_ANON_KEY` у `.env.local`.
             </div>
           )}
 
-          <button onClick={() => handleOAuth("google")} disabled={!authEnabled} className="w-full flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 border border-gray-700 hover:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl px-4 py-3 font-medium transition-all duration-200 mb-3">
+          <button
+            onClick={() => handleOAuth("google")}
+            disabled={!authEnabled}
+            className="w-full flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 active:scale-95 border border-gray-700 hover:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-white rounded-xl px-4 py-3 font-medium transition-all duration-200 mb-3"
+          >
             <Chrome className="w-5 h-5" />
             Увійти через Google
           </button>
 
-          <button onClick={() => handleOAuth("github")} disabled={!authEnabled} className="w-full flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 border border-gray-700 hover:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl px-4 py-3 font-medium transition-all duration-200 mb-4">
+          <button
+            onClick={() => handleOAuth("github")}
+            disabled={!authEnabled}
+            className="w-full flex items-center justify-center gap-3 bg-white/5 hover:bg-white/10 active:scale-95 border border-gray-700 hover:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-white rounded-xl px-4 py-3 font-medium transition-all duration-200 mb-4"
+          >
             <Github className="w-5 h-5" />
             Увійти через GitHub
           </button>
@@ -248,30 +258,48 @@ export default function LoginPage() {
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
-                type="email" value={email} onChange={e => setEmail(e.target.value)}
-                placeholder="email@example.com" required
-                className="w-full bg-gray-800/50 border border-gray-700 focus:border-violet-500 text-white placeholder-gray-500 rounded-xl pl-10 pr-4 py-3 text-sm outline-none transition-colors"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="email@example.com"
+                required
+                className="w-full bg-gray-800/50 border border-gray-700 focus:border-violet-500 text-white placeholder-gray-500 rounded-xl pl-10 pr-4 py-3 text-base outline-none transition-colors"
               />
             </div>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
-                type={showPass ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)}
-                placeholder="Пароль" required minLength={6}
-                className="w-full bg-gray-800/50 border border-gray-700 focus:border-violet-500 text-white placeholder-gray-500 rounded-xl pl-10 pr-10 py-3 text-sm outline-none transition-colors"
+                type={showPass ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Пароль"
+                required
+                minLength={6}
+                className="w-full bg-gray-800/50 border border-gray-700 focus:border-violet-500 text-white placeholder-gray-500 rounded-xl pl-10 pr-10 py-3 text-base outline-none transition-colors"
               />
-              <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors">
+              <button
+                type="button"
+                onClick={() => setShowPass(!showPass)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+              >
                 {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
-            <button type="submit" disabled={loading || !authEnabled} className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl px-4 py-3 font-medium transition-all duration-200 shadow-lg shadow-violet-500/20">
+            <button
+              type="submit"
+              disabled={loading || !authEnabled}
+              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-white rounded-xl px-4 py-3 font-medium transition-all duration-200 shadow-lg shadow-violet-500/20"
+            >
               <LogIn className="w-4 h-4" />
               {loading ? "Завантаження..." : mode === "signin" ? "Увійти" : "Зареєструватися"}
             </button>
 
             {mode === "signin" && (
               <div className="text-right">
-                <Link href="/forgot-password" className="text-xs text-gray-400 hover:text-violet-300 transition-colors">
+                <Link
+                  href="/forgot-password"
+                  className="text-xs text-gray-400 hover:text-violet-300 transition-colors"
+                >
                   Забув(ла) пароль?
                 </Link>
               </div>
@@ -289,19 +317,22 @@ export default function LoginPage() {
                   value={verificationCode}
                   onChange={(event) => setVerificationCode(event.target.value.replace(/\s+/g, ""))}
                   placeholder="Введи код з email"
-                  className="flex-1 bg-gray-900/70 border border-gray-700 focus:border-violet-500 text-white placeholder-gray-500 rounded-xl px-3 py-2 text-sm outline-none transition-colors"
+                  className="flex-1 bg-gray-900/70 border border-gray-700 focus:border-violet-500 text-white placeholder-gray-500 rounded-xl px-3 py-2 text-base outline-none transition-colors"
                 />
                 <button
                   type="button"
                   onClick={handleVerifySignupCode}
                   disabled={verifyingCode || !authEnabled}
-                  className="bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl px-4 py-2 text-sm font-medium"
+                  className="bg-violet-600 hover:bg-violet-500 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer text-white rounded-xl px-4 py-2 text-sm font-medium transition-transform"
                 >
                   {verifyingCode ? "Перевіряємо..." : "Підтвердити код"}
                 </button>
               </div>
 
-              <Link href={`/auth/verify-email?email=${encodeURIComponent(pendingVerificationEmail)}`} className="underline underline-offset-2 hover:text-blue-100">
+              <Link
+                href={`/auth/verify-email?email=${encodeURIComponent(pendingVerificationEmail)}`}
+                className="underline underline-offset-2 hover:text-blue-100"
+              >
                 Надіслати код ще раз
               </Link>
             </div>
@@ -309,7 +340,15 @@ export default function LoginPage() {
 
           <p className="text-center text-gray-500 text-sm mt-4">
             {mode === "signin" ? "Немає акаунту? " : "Вже є акаунт? "}
-            <button onClick={() => { setMode(mode === "signin" ? "signup" : "signin"); setError(null); setSuccess(null); setPendingVerificationEmail(null); }} className="text-violet-400 hover:text-violet-300 font-medium transition-colors">
+            <button
+              onClick={() => {
+                setMode(mode === "signin" ? "signup" : "signin");
+                setError(null);
+                setSuccess(null);
+                setPendingVerificationEmail(null);
+              }}
+              className="text-violet-400 hover:text-violet-300 font-medium transition-colors cursor-pointer"
+            >
               {mode === "signin" ? "Зареєструватися" : "Увійти"}
             </button>
           </p>
