@@ -13,6 +13,10 @@ const cspHeader = [
 ].join("; ");
 
 const nextConfig = {
+  env: {
+    NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA: process.env.VERCEL_GIT_COMMIT_SHA ?? "",
+    NEXT_PUBLIC_VERCEL_URL: process.env.VERCEL_URL ?? ""
+  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "lh3.googleusercontent.com" },
@@ -37,12 +41,7 @@ const nextConfig = {
       config.watchOptions = {
         poll: config.watchOptions?.poll,
         aggregateTimeout: config.watchOptions?.aggregateTimeout,
-        ignored: [
-          "**/DumpStack.log.tmp",
-          "**/hiberfil.sys",
-          "**/pagefile.sys",
-          "**/swapfile.sys"
-        ]
+        ignored: ["**/DumpStack.log.tmp", "**/hiberfil.sys", "**/pagefile.sys", "**/swapfile.sys"]
       };
     }
     return config;
