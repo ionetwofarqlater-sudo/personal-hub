@@ -1,3 +1,7 @@
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const { version } = require("./package.json");
+
 /** @type {import('next').NextConfig} */
 const cspHeader = [
   "default-src 'self'",
@@ -15,7 +19,8 @@ const cspHeader = [
 const nextConfig = {
   env: {
     NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA: process.env.VERCEL_GIT_COMMIT_SHA ?? "",
-    NEXT_PUBLIC_VERCEL_URL: process.env.VERCEL_URL ?? ""
+    NEXT_PUBLIC_VERCEL_URL: process.env.VERCEL_URL ?? "",
+    NEXT_PUBLIC_APP_VERSION: version
   },
   images: {
     remotePatterns: [

@@ -1,2 +1,14 @@
 #!/usr/bin/env sh
+# Bump patch version in package.json and stage it
+node -e "
+const fs = require('fs');
+const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+const parts = pkg.version.split('.').map(Number);
+parts[2]++;
+pkg.version = parts.join('.');
+fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2) + '\n');
+console.log('Version bumped to ' + pkg.version);
+"
+git add package.json
+
 npx lint-staged
