@@ -6,10 +6,28 @@ import WeatherWidget from "./WeatherWidget";
 import UserNav from "./UserNav";
 import type { User } from "@supabase/supabase-js";
 import { readSettings, SETTINGS_EVENT_NAME } from "@/lib/settings";
+import { createClient } from "@/lib/supabase/client";
 
-export default function DashboardHeader({ user, savedCount }: { user: User | null; savedCount: number }) {
+export default function DashboardHeader({ user: initialUser, savedCount: initialSavedCount }: { user: User | null; savedCount: number }) {
   const [time, setTime] = useState("");
   const [date, setDate] = useState("");
+  const [user, setUser] = useState<User | null>(initialUser);
+  const [savedCount, setSavedCount] = useState(initialSavedCount);
+
+  // Fallback: якщо серверний user не прийшов — читаємо сесію на клієнті
+  useEffect(() => {
+    if (initialUser) return;
+    const supabase = createClient();
+    if (!supabase) return;
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) setUser(data.user);
+    });
+    supabase
+      .from('saved_items')
+      .select('*', { count: 'exact', head: true })
+      .is('deleted_at', null)
+      .then(({ count }) => setSavedCount(count ?? 0));
+  }, [initialUser]);
 
   useEffect(() => {
     let activeSettings = readSettings();
@@ -68,7 +86,13 @@ export default function DashboardHeader({ user, savedCount }: { user: User | nul
           </div>
           <div className="sm:hidden text-white font-mono font-bold text-sm">{time}</div>
 
-          {user && <UserNav user={user} savedCount={savedCount} />}
+          {user ? (
+            <UserNav user={user} savedCount={savedCount} />
+          ) : (
+            <div className="flex items-center gap-2 pl-2 sm:pl-3 border-l border-gray-800">
+              <div className="w-8 h-8 rounded-full bg-gray-700 animate-pulse" />
+            </div>
+          )}
         </div>
       </div>
     </header>
