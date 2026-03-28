@@ -15,6 +15,7 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@radix-ui/react-dropdown-menu": "^2.1.16",
     "@supabase/ssr": "^0.3.0",
     "@supabase/supabase-js": "^2.43.4",
     "lucide-react": "^0.378.0",
