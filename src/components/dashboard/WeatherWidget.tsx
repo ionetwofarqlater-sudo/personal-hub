@@ -41,7 +41,7 @@ export default function WeatherWidget() {
         "[WeatherWidget] rawKey length:",
         rawKey.length,
         "| codes:",
-        [...rawKey].map((c) => c.charCodeAt(0))
+        Array.from(rawKey).map((c) => c.charCodeAt(0))
       );
       console.debug(
         "[WeatherWidget] apiKey after clean:",
