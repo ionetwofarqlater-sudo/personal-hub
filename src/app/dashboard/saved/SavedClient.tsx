@@ -134,7 +134,7 @@ export default function SavedClient({ initialItems, userId, dbError }: Props) {
       {dbError && (
         <div className="flex-shrink-0 flex items-center gap-2 mt-2 px-3 py-2 bg-red-500/10 border border-red-500/20 rounded-xl text-xs text-red-300">
           <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
-          <span>Помилка з'єднання з базою даних. Дані можуть бути застарілими.</span>
+          <span>Помилка з&apos;єднання з базою даних. Дані можуть бути застарілими.</span>
         </div>
       )}
 
