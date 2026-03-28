@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import { useState, useCallback, useEffect } from 'react';
-import { BookMarked, Trash2, Tag, X, Check, AlertTriangle, Loader2 } from 'lucide-react';
-import SavedFeed from './components/SavedFeed';
-import SavedComposer from './components/SavedComposer';
-import SavedFilters from './components/SavedFilters';
-import SavedSearchBar from './components/SavedSearchBar';
-import { useSavedItems } from './hooks/useSavedItems';
-import { useSavedSearch } from './hooks/useSavedSearch';
-import type { SavedItem } from '@/types/domain';
+import { useState, useCallback, useEffect } from "react";
+import { BookMarked, Trash2, Tag, X, Check, AlertTriangle, Loader2 } from "lucide-react";
+import SavedFeed from "./components/SavedFeed";
+import SavedComposer from "./components/SavedComposer";
+import SavedFilters from "./components/SavedFilters";
+import SavedSearchBar from "./components/SavedSearchBar";
+import { useSavedItems } from "./hooks/useSavedItems";
+import { useSavedSearch } from "./hooks/useSavedSearch";
+import type { SavedItem } from "@/types/domain";
 
 type Props = { initialItems: SavedItem[]; userId: string; dbError?: string | null };
 
@@ -22,15 +22,19 @@ export default function SavedClient({ initialItems, userId, dbError }: Props) {
     return () => clearTimeout(t);
   }, [connecting]);
 
-  const { items, addItem, updateItem, deleteItem, bulkDelete, bulkTag } = useSavedItems(initialItems, userId);
-  const { filtered, rawSearch, setRawSearch, filters, setFilters, ftsLoading } = useSavedSearch(items);
+  const { items, addItem, updateItem, deleteItem, bulkDelete, bulkTag } = useSavedItems(
+    initialItems,
+    userId
+  );
+  const { filtered, rawSearch, setRawSearch, filters, setFilters, ftsLoading } =
+    useSavedSearch(items);
   const [replyTo, setReplyTo] = useState<SavedItem | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [tagInput, setTagInput] = useState('');
+  const [tagInput, setTagInput] = useState("");
   const [tagging, setTagging] = useState(false);
 
   const toggleSelect = useCallback((id: string) => {
-    setSelectedIds(prev => {
+    setSelectedIds((prev) => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
@@ -40,7 +44,7 @@ export default function SavedClient({ initialItems, userId, dbError }: Props) {
   const clearSelection = useCallback(() => {
     setSelectedIds(new Set());
     setTagging(false);
-    setTagInput('');
+    setTagInput("");
   }, []);
 
   const handleBulkDelete = useCallback(async () => {
@@ -51,7 +55,7 @@ export default function SavedClient({ initialItems, userId, dbError }: Props) {
   const handleBulkTag = useCallback(async () => {
     const tags = tagInput
       .split(/[\s,]+/)
-      .map(t => t.replace(/^#/, '').toLowerCase())
+      .map((t) => t.replace(/^#/, "").toLowerCase())
       .filter(Boolean);
     if (tags.length === 0) return;
     await bulkTag(Array.from(selectedIds), tags);
@@ -79,17 +83,15 @@ export default function SavedClient({ initialItems, userId, dbError }: Props) {
       {/* Bulk action bar — slides in when items are selected */}
       {hasSelection && (
         <div className="flex-shrink-0 flex items-center gap-2 mt-2 px-3 py-2 bg-gray-900/80 border border-gray-700 rounded-xl backdrop-blur-sm animate-fade-in">
-          <span className="text-xs text-gray-400 font-medium mr-1">
-            {selectedIds.size} вибрано
-          </span>
+          <span className="text-xs text-gray-400 font-medium mr-1">{selectedIds.size} вибрано</span>
 
           {tagging ? (
             <>
               <input
                 autoFocus
                 value={tagInput}
-                onChange={e => setTagInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleBulkTag()}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleBulkTag()}
                 placeholder="#тег або кілька через пробіл"
                 className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-violet-500/60"
               />
@@ -99,7 +101,10 @@ export default function SavedClient({ initialItems, userId, dbError }: Props) {
               >
                 <Check className="w-3 h-3" /> Застосувати
               </button>
-              <button onClick={() => setTagging(false)} className="text-gray-600 hover:text-gray-400">
+              <button
+                onClick={() => setTagging(false)}
+                className="text-gray-600 hover:text-gray-400"
+              >
                 <X className="w-3.5 h-3.5" />
               </button>
             </>
@@ -160,18 +165,17 @@ export default function SavedClient({ initialItems, userId, dbError }: Props) {
           onDelete={deleteItem}
           onReply={setReplyTo}
           onUpdateMeta={(id, meta) =>
-            updateItem(id, { metadata: { ...(items.find(i => i.id === id)?.metadata ?? {}), ...meta } })
+            updateItem(id, {
+              metadata: { ...(items.find((i) => i.id === id)?.metadata ?? {}), ...meta }
+            })
           }
+          onSetReminder={(id, iso) => updateItem(id, { reminder_at: iso })}
         />
       </div>
 
       {/* Composer — hidden during bulk selection */}
       {!hasSelection && (
-        <SavedComposer
-          onAdd={addItem}
-          replyTo={replyTo}
-          onCancelReply={() => setReplyTo(null)}
-        />
+        <SavedComposer onAdd={addItem} replyTo={replyTo} onCancelReply={() => setReplyTo(null)} />
       )}
     </div>
   );

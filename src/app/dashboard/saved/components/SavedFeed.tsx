@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useEffect, useRef } from 'react';
-import SavedBubble from './SavedBubble';
-import type { SavedItem } from '@/types/domain';
+import { useEffect, useRef } from "react";
+import SavedBubble from "./SavedBubble";
+import type { SavedItem } from "@/types/domain";
 
 type Props = {
   items: SavedItem[];
@@ -16,6 +16,7 @@ type Props = {
   onDelete: (id: string) => void;
   onReply: (item: SavedItem) => void;
   onUpdateMeta: (id: string, meta: Record<string, string>) => void;
+  onSetReminder: (id: string, iso: string | null) => void;
 };
 
 function formatDateSeparator(isoString: string): string {
@@ -27,10 +28,10 @@ function formatDateSeparator(isoString: string): string {
   const isToday = date.toDateString() === today.toDateString();
   const isYesterday = date.toDateString() === yesterday.toDateString();
 
-  if (isToday) return 'Сьогодні';
-  if (isYesterday) return 'Вчора';
+  if (isToday) return "Сьогодні";
+  if (isYesterday) return "Вчора";
 
-  return date.toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', year: 'numeric' });
+  return date.toLocaleDateString("uk-UA", { day: "numeric", month: "long", year: "numeric" });
 }
 
 export default function SavedFeed({
@@ -45,13 +46,15 @@ export default function SavedFeed({
   onDelete,
   onReply,
   onUpdateMeta,
+  onSetReminder
 }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null);
+  const dateRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const prevCountRef = useRef(items.length);
 
   useEffect(() => {
     if (items.length > prevCountRef.current) {
-      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
     }
     prevCountRef.current = items.length;
   }, [items.length]);
@@ -71,14 +74,20 @@ export default function SavedFeed({
   );
 
   const rendered: React.ReactNode[] = [];
-  let lastDateStr = '';
+  let lastDateStr = "";
 
   for (const item of sorted) {
     const dateStr = new Date(item.created_at).toDateString();
     if (dateStr !== lastDateStr) {
       lastDateStr = dateStr;
       rendered.push(
-        <div key={`sep-${dateStr}`} className="flex items-center gap-3 my-4">
+        <div
+          key={`sep-${dateStr}`}
+          ref={(el) => {
+            if (el) dateRefs.current.set(dateStr, el);
+          }}
+          className="flex items-center gap-3 my-4"
+        >
           <div className="flex-1 h-px bg-gray-800" />
           <span className="text-xs text-gray-600 font-medium px-2 py-0.5 bg-gray-900 rounded-full border border-gray-800">
             {formatDateSeparator(item.created_at)}
@@ -89,7 +98,7 @@ export default function SavedFeed({
     }
 
     const replyParent = item.reply_to
-      ? allItems.find(i => i.id === item.reply_to) ?? null
+      ? (allItems.find((i) => i.id === item.reply_to) ?? null)
       : null;
 
     rendered.push(
@@ -106,12 +115,25 @@ export default function SavedFeed({
         onDelete={() => onDelete(item.id)}
         onReply={() => onReply(item)}
         onUpdateMeta={(meta) => onUpdateMeta(item.id, meta)}
+        onSetReminder={(iso) => onSetReminder(item.id, iso)}
       />
     );
   }
 
   return (
     <div className="flex flex-col px-2 pb-4">
+      <div className="flex items-center gap-2 mb-2 px-2">
+        <input
+          type="date"
+          className="bg-gray-900 border border-gray-800 rounded-lg px-2 py-1 text-xs text-gray-400 focus:outline-none focus:border-violet-500/60"
+          onChange={(e) => {
+            const val = e.target.value;
+            const target = dateRefs.current.get(new Date(val + "T00:00:00").toDateString());
+            target?.scrollIntoView({ behavior: "smooth", block: "start" });
+          }}
+        />
+        <span className="text-xs text-gray-600">jump to date</span>
+      </div>
       {rendered}
       <div ref={bottomRef} />
     </div>

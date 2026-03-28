@@ -1,13 +1,30 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useState } from "react";
 import {
-  Pin, PinOff, Heart, HeartOff, Trash2, Reply,
-  Copy, Link2, FileUp, Image, Mic, Type, ChevronDown, ChevronUp, Check,
-} from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
-import LinkPreview from './LinkPreview';
-import type { SavedItem } from '@/types/domain';
+  Pin,
+  PinOff,
+  Heart,
+  HeartOff,
+  Trash2,
+  Reply,
+  Copy,
+  Link2,
+  FileUp,
+  Image,
+  Mic,
+  Type,
+  ChevronDown,
+  ChevronUp,
+  Check,
+  Download,
+  FileDown,
+  Bell,
+  BellOff
+} from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import LinkPreview from "./LinkPreview";
+import type { SavedItem } from "@/types/domain";
 
 type Props = {
   item: SavedItem;
@@ -21,6 +38,7 @@ type Props = {
   onDelete: () => void;
   onReply: () => void;
   onUpdateMeta?: (meta: Record<string, string>) => void;
+  onSetReminder: (iso: string | null) => void;
 };
 
 const TYPE_ICON: Record<string, React.ElementType> = {
@@ -28,11 +46,11 @@ const TYPE_ICON: Record<string, React.ElementType> = {
   link: Link2,
   file: FileUp,
   image: Image,
-  voice: Mic,
+  voice: Mic
 };
 
 function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
+  return new Date(iso).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" });
 }
 
 export default function SavedBubble({
@@ -47,14 +65,38 @@ export default function SavedBubble({
   onDelete,
   onReply,
   onUpdateMeta,
+  onSetReminder
 }: Props) {
   const [showMd, setShowMd] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showReminderPicker, setShowReminderPicker] = useState(false);
 
   const Icon = TYPE_ICON[item.content_type] ?? Type;
 
+  function handleExportMd() {
+    const lines: string[] = [];
+    if (item.title) lines.push(`# ${item.title}`, "");
+    if (item.content_type === "link" && item.source_url) lines.push(item.source_url);
+    else if (item.content) lines.push(item.content);
+    if (item.tags.length > 0) lines.push("", item.tags.map((t) => `#${t}`).join(" "));
+    lines.push("", `_Збережено: ${new Date(item.created_at).toLocaleString("uk-UA")}_`);
+    const blob = new Blob([lines.join("\n")], { type: "text/markdown" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `saved-${item.id.slice(0, 8)}.md`;
+    a.click();
+  }
+
+  function handleExportJson() {
+    const blob = new Blob([JSON.stringify(item, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `saved-${item.id.slice(0, 8)}.json`;
+    a.click();
+  }
+
   async function handleCopy() {
-    const text = item.content_type === 'link' ? item.source_url : item.content;
+    const text = item.content_type === "link" ? item.source_url : item.content;
     if (!text) return;
     await navigator.clipboard.writeText(text);
     setCopied(true);
@@ -65,16 +107,16 @@ export default function SavedBubble({
     <div
       className={`group relative flex flex-col max-w-2xl mx-auto w-full mb-1 rounded-2xl transition-colors ${
         isSelected
-          ? 'bg-violet-500/10 border border-violet-500/30'
+          ? "bg-violet-500/10 border border-violet-500/30"
           : item.is_pinned
-          ? 'bg-amber-500/5 border border-amber-500/10'
-          : 'border border-transparent'
+            ? "bg-amber-500/5 border border-amber-500/10"
+            : "border border-transparent"
       }`}
     >
       {/* Reply quote */}
       {replyParent && (
         <div className="ml-4 mb-1 pl-3 border-l-2 border-violet-500/40 text-xs text-gray-500 truncate">
-          ↩ {replyParent.title ?? replyParent.content?.slice(0, 60) ?? '…'}
+          ↩ {replyParent.title ?? replyParent.content?.slice(0, 60) ?? "…"}
         </div>
       )}
 
@@ -84,8 +126,8 @@ export default function SavedBubble({
           onClick={onToggleSelect}
           className={`flex-shrink-0 mt-1 w-4 h-4 rounded border transition-all ${
             isSelected
-              ? 'bg-violet-500 border-violet-500 flex items-center justify-center'
-              : 'border-gray-700 bg-transparent opacity-0 group-hover:opacity-100'
+              ? "bg-violet-500 border-violet-500 flex items-center justify-center"
+              : "border-gray-700 bg-transparent opacity-0 group-hover:opacity-100"
           }`}
           title="Вибрати"
         >
@@ -103,7 +145,7 @@ export default function SavedBubble({
             <p className="text-white font-medium text-sm leading-snug mb-0.5">{item.title}</p>
           )}
 
-          {item.content_type === 'link' && item.source_url && (
+          {item.content_type === "link" && item.source_url && (
             <div>
               <a
                 href={item.source_url}
@@ -116,17 +158,19 @@ export default function SavedBubble({
               <LinkPreview
                 url={item.source_url}
                 cached={item.metadata as Record<string, string>}
-                onFetched={og => onUpdateMeta?.({
-                  og_title: og.title ?? '',
-                  og_description: og.description ?? '',
-                  og_image: og.image ?? '',
-                  og_site_name: og.siteName ?? '',
-                })}
+                onFetched={(og) =>
+                  onUpdateMeta?.({
+                    og_title: og.title ?? "",
+                    og_description: og.description ?? "",
+                    og_image: og.image ?? "",
+                    og_site_name: og.siteName ?? ""
+                  })
+                }
               />
             </div>
           )}
 
-          {item.content_type === 'text' && item.content && (
+          {item.content_type === "text" && item.content && (
             <div>
               {showMd ? (
                 <div className="prose prose-invert prose-sm max-w-none text-gray-300">
@@ -138,27 +182,27 @@ export default function SavedBubble({
                 </p>
               )}
               <button
-                onClick={() => setShowMd(v => !v)}
+                onClick={() => setShowMd((v) => !v)}
                 className="mt-1 flex items-center gap-1 text-xs text-gray-600 hover:text-gray-400 transition-colors"
               >
                 {showMd ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-                {showMd ? 'Сховати MD' : 'MD preview'}
+                {showMd ? "Сховати MD" : "MD preview"}
               </button>
             </div>
           )}
 
-          {item.content_type === 'image' && item.source_url && (
+          {item.content_type === "image" && item.source_url && (
             <div className="mt-1">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={item.source_url}
-                alt={item.title ?? 'image'}
+                alt={item.title ?? "image"}
                 className="max-h-64 rounded-xl object-cover border border-gray-800"
               />
             </div>
           )}
 
-          {item.content_type === 'file' && item.source_url && (
+          {item.content_type === "file" && item.source_url && (
             <a
               href={item.source_url}
               target="_blank"
@@ -167,7 +211,7 @@ export default function SavedBubble({
             >
               <FileUp className="w-4 h-4 text-gray-500 flex-shrink-0" />
               <span className="truncate">
-                {(item.metadata as Record<string, string>)?.filename ?? item.title ?? 'Файл'}
+                {(item.metadata as Record<string, string>)?.filename ?? item.title ?? "Файл"}
               </span>
               {(item.metadata as Record<string, string>)?.size && (
                 <span className="text-gray-600 text-xs ml-auto flex-shrink-0">
@@ -177,14 +221,14 @@ export default function SavedBubble({
             </a>
           )}
 
-          {item.content_type === 'voice' && (
-            <p className="text-gray-400 text-sm">{item.title ?? item.content ?? '—'}</p>
+          {item.content_type === "voice" && (
+            <p className="text-gray-400 text-sm">{item.title ?? item.content ?? "—"}</p>
           )}
 
           {/* Теги */}
           {item.tags.length > 0 && (
             <div className="flex flex-wrap gap-1 mt-1.5">
-              {item.tags.map(tag => (
+              {item.tags.map((tag) => (
                 <span
                   key={tag}
                   className="px-1.5 py-0.5 text-xs bg-gray-800/70 text-gray-500 rounded-md border border-gray-700/50"
@@ -212,20 +256,82 @@ export default function SavedBubble({
           <Reply className="w-3.5 h-3.5" />
         </ActionBtn>
         <ActionBtn onClick={handleCopy} title="Копіювати">
-          {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+          {copied ? (
+            <Check className="w-3.5 h-3.5 text-green-400" />
+          ) : (
+            <Copy className="w-3.5 h-3.5" />
+          )}
         </ActionBtn>
-        <ActionBtn onClick={item.is_pinned ? onUnpin : onPin} title={item.is_pinned ? 'Відкріпити' : 'Закріпити'}>
-          {item.is_pinned ? <PinOff className="w-3.5 h-3.5 text-amber-400" /> : <Pin className="w-3.5 h-3.5" />}
+        <ActionBtn onClick={handleExportMd} title="Експорт .md">
+          <Download className="w-3.5 h-3.5" />
         </ActionBtn>
-        <ActionBtn onClick={item.is_favorite ? onUnfavorite : onFavorite} title={item.is_favorite ? 'Прибрати' : 'Обране'}>
-          {item.is_favorite
-            ? <HeartOff className="w-3.5 h-3.5 text-red-400" />
-            : <Heart className="w-3.5 h-3.5" />}
+        <ActionBtn onClick={handleExportJson} title="Експорт .json">
+          <FileDown className="w-3.5 h-3.5" />
         </ActionBtn>
-        <ActionBtn onClick={onDelete} title="Видалити" className="hover:text-red-400 hover:bg-red-400/10">
+        <ActionBtn
+          onClick={item.is_pinned ? onUnpin : onPin}
+          title={item.is_pinned ? "Відкріпити" : "Закріпити"}
+        >
+          {item.is_pinned ? (
+            <PinOff className="w-3.5 h-3.5 text-amber-400" />
+          ) : (
+            <Pin className="w-3.5 h-3.5" />
+          )}
+        </ActionBtn>
+        <ActionBtn
+          onClick={item.is_favorite ? onUnfavorite : onFavorite}
+          title={item.is_favorite ? "Прибрати" : "Обране"}
+        >
+          {item.is_favorite ? (
+            <HeartOff className="w-3.5 h-3.5 text-red-400" />
+          ) : (
+            <Heart className="w-3.5 h-3.5" />
+          )}
+        </ActionBtn>
+        <ActionBtn
+          onClick={() => setShowReminderPicker((v) => !v)}
+          title={item.reminder_at ? "Нагадування встановлено" : "Нагадати"}
+        >
+          {item.reminder_at ? (
+            <BellOff className="w-3.5 h-3.5 text-yellow-400" />
+          ) : (
+            <Bell className="w-3.5 h-3.5" />
+          )}
+        </ActionBtn>
+        <ActionBtn
+          onClick={onDelete}
+          title="Видалити"
+          className="hover:text-red-400 hover:bg-red-400/10"
+        >
           <Trash2 className="w-3.5 h-3.5" />
         </ActionBtn>
       </div>
+
+      {showReminderPicker && (
+        <div className="absolute right-2 top-10 z-20 bg-gray-900 border border-gray-700 rounded-xl p-3 shadow-xl flex flex-col gap-2 min-w-[200px]">
+          <p className="text-xs text-gray-400 font-medium">Нагадати</p>
+          <input
+            type="datetime-local"
+            defaultValue={item.reminder_at ? item.reminder_at.slice(0, 16) : ""}
+            className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-xs text-white focus:outline-none focus:border-violet-500/60"
+            onChange={(e) => {
+              onSetReminder(e.target.value ? new Date(e.target.value).toISOString() : null);
+              setShowReminderPicker(false);
+            }}
+          />
+          {item.reminder_at && (
+            <button
+              onClick={() => {
+                onSetReminder(null);
+                setShowReminderPicker(false);
+              }}
+              className="text-xs text-red-400 hover:text-red-300 text-left"
+            >
+              Скасувати нагадування
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -234,7 +340,7 @@ function ActionBtn({
   onClick,
   title,
   children,
-  className = '',
+  className = ""
 }: {
   onClick: () => void;
   title: string;
