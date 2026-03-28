@@ -1,45 +1,36 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { Cloud, FileText, Settings, Plus, UserCircle2 } from "lucide-react";
+import Link from 'next/link';
+import { BookMarked, Settings, Plus, UserCircle2 } from 'lucide-react';
 
 const apps = [
   {
-    id: "clouddrop",
-    name: "CloudDrop",
-    description: "Хмарний буфер обміну",
-    href: "/dashboard/clouddrop",
-    icon: Cloud,
-    gradient: "from-blue-500 to-cyan-400",
-    glow: "shadow-blue-500/20"
+    id: 'saved',
+    name: 'Saved',
+    description: 'Нотатки, посилання, файли',
+    href: '/dashboard/saved',
+    icon: BookMarked,
+    gradient: 'from-violet-500 to-blue-500',
+    glow: 'shadow-violet-500/20',
   },
   {
-    id: "notes",
-    name: "Нотатки",
-    description: "Швидкі нотатки",
-    href: "/dashboard/notes",
-    icon: FileText,
-    gradient: "from-amber-500 to-orange-400",
-    glow: "shadow-amber-500/20"
-  },
-  {
-    id: "settings",
-    name: "Налаштування",
-    description: "Параметри акаунту",
-    href: "/dashboard/settings",
+    id: 'settings',
+    name: 'Налаштування',
+    description: 'Параметри акаунту',
+    href: '/dashboard/settings',
     icon: Settings,
-    gradient: "from-gray-500 to-gray-400",
-    glow: "shadow-gray-500/20"
+    gradient: 'from-gray-500 to-gray-400',
+    glow: 'shadow-gray-500/20',
   },
   {
-    id: "profile",
-    name: "Профіль",
-    description: "Профіль та безпека",
-    href: "/dashboard/profile",
+    id: 'profile',
+    name: 'Профіль',
+    description: 'Профіль та безпека',
+    href: '/dashboard/profile',
     icon: UserCircle2,
-    gradient: "from-violet-500 to-fuchsia-400",
-    glow: "shadow-violet-500/20"
-  }
+    gradient: 'from-violet-500 to-fuchsia-400',
+    glow: 'shadow-violet-500/20',
+  },
 ];
 
 export default function AppGrid() {
