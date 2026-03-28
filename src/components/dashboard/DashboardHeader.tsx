@@ -8,6 +8,22 @@ import type { User } from "@supabase/supabase-js";
 import { readSettings, SETTINGS_EVENT_NAME } from "@/lib/settings";
 import { createClient } from "@/lib/supabase/client";
 
+const SHA = process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA;
+const DEPLOY_URL = process.env.NEXT_PUBLIC_VERCEL_URL;
+
+function BuildBadge() {
+  if (!SHA) return null;
+  const short = SHA.slice(0, 7);
+  const href = DEPLOY_URL ? `https://${DEPLOY_URL}` : undefined;
+  const inner = (
+    <span className="hidden sm:inline-flex items-center gap-1 font-mono text-[10px] text-gray-600 hover:text-gray-400 transition-colors leading-none mt-0.5">
+      <span className="w-1.5 h-1.5 rounded-full bg-green-500/70 inline-block" />
+      {short}
+    </span>
+  );
+  return href ? <a href={href} target="_blank" rel="noopener noreferrer">{inner}</a> : inner;
+}
+
 export default function DashboardHeader({ user: initialUser, savedCount: initialSavedCount }: { user: User | null; savedCount: number }) {
   const [time, setTime] = useState("");
   const [date, setDate] = useState("");
@@ -74,7 +90,10 @@ export default function DashboardHeader({ user: initialUser, savedCount: initial
           <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-blue-500 rounded-lg flex items-center justify-center shadow-md shadow-violet-500/20">
             <Zap className="w-4 h-4 text-white" />
           </div>
-          <span className="font-semibold text-white hidden sm:block">Personal Hub</span>
+          <div className="flex flex-col">
+            <span className="font-semibold text-white hidden sm:block leading-none">Personal Hub</span>
+            <BuildBadge />
+          </div>
         </div>
 
         <div className="flex items-center gap-2 sm:gap-4">
