@@ -1,149 +1,135 @@
-'use client';
+"use client";
 
-import { useState, useCallback } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import type { SavedItem, CreateSavedItemInput, UpdateSavedItemInput } from '@/types/domain';
+import { useState, useCallback } from "react";
+import type { SavedItem, CreateSavedItemInput, UpdateSavedItemInput } from "@/types/domain";
 
-const LS_KEY = 'saved_items_draft';
+const LS_KEY = "saved_items_draft";
 
 export function useSavedItems(initial: SavedItem[], userId: string) {
   const [items, setItems] = useState<SavedItem[]>(initial);
-  const supabase = createClient();
 
-  const addItem = useCallback(async (rawInput: CreateSavedItemInput) => {
-    if (!supabase) return;
+  const addItem = useCallback(
+    async (rawInput: CreateSavedItemInput) => {
+      const { _meta, ...input } = rawInput as CreateSavedItemInput & {
+        _meta?: Record<string, string>;
+      };
 
-    // Strip out the _meta sidecar that SavedComposer attaches for file uploads
-    const { _meta, ...input } = rawInput as CreateSavedItemInput & { _meta?: Record<string, string> };
-    const extraMeta: Record<string, string> = _meta ?? {};
+      const optimistic: SavedItem = {
+        id: `temp-${Date.now()}`,
+        user_id: userId,
+        ...input,
+        is_pinned: false,
+        is_favorite: false,
+        metadata: _meta ?? {},
+        deleted_at: null,
+        reminder_at: null,
+        reply_parent: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+      setItems((prev) => [optimistic, ...prev]);
 
-    // Optimistic
-    const optimistic: SavedItem = {
-      id: `temp-${Date.now()}`,
-      user_id: userId,
-      ...input,
-      is_pinned: false,
-      is_favorite: false,
-      metadata: extraMeta,
-      deleted_at: null,
-      reminder_at: null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    setItems(prev => [optimistic, ...prev]);
-
-    try {
-      const { data, error } = await supabase
-        .from('saved_items')
-        .insert({ ...input, user_id: userId, metadata: extraMeta })
-        .select('*')
-        .single();
-      if (error) throw error;
-
-      setItems(prev => prev.map(i => (i.id === optimistic.id ? (data as SavedItem) : i)));
-    } catch {
-      // Rollback
-      setItems(prev => prev.filter(i => i.id !== optimistic.id));
-      // Зберігаємо чернетку у localStorage
       try {
-        localStorage.setItem(LS_KEY, JSON.stringify(input));
-      } catch {}
-    }
-  }, [supabase, userId]);
+        const res = await fetch("/api/saved", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...input, metadata: _meta ?? {} })
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const data: SavedItem = await res.json();
+        setItems((prev) => prev.map((i) => (i.id === optimistic.id ? data : i)));
+      } catch {
+        setItems((prev) => prev.filter((i) => i.id !== optimistic.id));
+        try {
+          localStorage.setItem(LS_KEY, JSON.stringify(input));
+        } catch {}
+      }
+    },
+    [userId]
+  );
 
-  const updateItem = useCallback(async (id: string, patch: UpdateSavedItemInput) => {
-    if (!supabase) return;
+  const updateItem = useCallback(
+    async (id: string, patch: UpdateSavedItemInput) => {
+      const previous = items.find((i) => i.id === id);
+      setItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...patch } : i)));
 
-    const previous = items.find(i => i.id === id);
-    setItems(prev => prev.map(i => (i.id === id ? { ...i, ...patch } : i)));
+      try {
+        const res = await fetch(`/api/saved/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(patch)
+        });
+        if (!res.ok) throw new Error(await res.text());
+      } catch {
+        if (previous) setItems((prev) => prev.map((i) => (i.id === id ? previous : i)));
+      }
+    },
+    [items]
+  );
 
-    try {
-      const { error } = await supabase
-        .from('saved_items')
-        .update(patch)
-        .eq('id', id)
-        .eq('user_id', userId);
-      if (error) throw error;
-    } catch {
-      if (previous) setItems(prev => prev.map(i => (i.id === id ? previous : i)));
-    }
-  }, [supabase, items, userId]);
+  const deleteItem = useCallback(
+    async (id: string) => {
+      const previous = items.find((i) => i.id === id);
+      setItems((prev) => prev.filter((i) => i.id !== id));
 
-  const deleteItem = useCallback(async (id: string) => {
-    if (!supabase) return;
+      try {
+        const res = await fetch(`/api/saved/${id}`, { method: "DELETE" });
+        if (!res.ok) throw new Error(await res.text());
+      } catch {
+        if (previous) setItems((prev) => [previous, ...prev]);
+      }
+    },
+    [items]
+  );
 
-    const previous = items.find(i => i.id === id);
-    // Soft delete — optimistic
-    setItems(prev => prev.filter(i => i.id !== id));
+  const bulkDelete = useCallback(
+    async (ids: string[]) => {
+      if (ids.length === 0) return;
+      const snapshots = items.filter((i) => ids.includes(i.id));
+      setItems((prev) => prev.filter((i) => !ids.includes(i.id)));
 
-    try {
-      const { error } = await supabase
-        .from('saved_items')
-        .update({ deleted_at: new Date().toISOString() })
-        .eq('id', id)
-        .eq('user_id', userId);
-      if (error) throw error;
-    } catch {
-      if (previous) setItems(prev => [previous, ...prev]);
-    }
-  }, [supabase, items, userId]);
+      try {
+        await Promise.all(ids.map((id) => fetch(`/api/saved/${id}`, { method: "DELETE" })));
+      } catch {
+        setItems((prev) => [...snapshots, ...prev]);
+      }
+    },
+    [items]
+  );
 
-  const bulkDelete = useCallback(async (ids: string[]) => {
-    if (!supabase || ids.length === 0) return;
-
-    const snapshots = items.filter(i => ids.includes(i.id));
-    setItems(prev => prev.filter(i => !ids.includes(i.id)));
-
-    try {
-      const { error } = await supabase
-        .from('saved_items')
-        .update({ deleted_at: new Date().toISOString() })
-        .in('id', ids)
-        .eq('user_id', userId);
-      if (error) throw error;
-    } catch {
-      setItems(prev => [...snapshots, ...prev]);
-    }
-  }, [supabase, items, userId]);
-
-  const bulkTag = useCallback(async (ids: string[], tags: string[]) => {
-    if (!supabase || ids.length === 0) return;
-
-    const snapshots = items.filter(i => ids.includes(i.id));
-    // Merge tags onto each item optimistically
-    setItems(prev =>
-      prev.map(i =>
-        ids.includes(i.id)
-          ? { ...i, tags: Array.from(new Set([...i.tags, ...tags])) }
-          : i
-      )
-    );
-
-    try {
-      // Supabase doesn't support bulk conditional updates in one shot,
-      // so we patch each item individually but in parallel
-      const updates = ids.map(id => {
-        const item = snapshots.find(s => s.id === id);
-        const merged = Array.from(new Set([...(item?.tags ?? []), ...tags]));
-        return supabase
-          .from('saved_items')
-          .update({ tags: merged })
-          .eq('id', id)
-          .eq('user_id', userId);
-      });
-      const results = await Promise.all(updates);
-      const firstError = results.find(r => r.error)?.error;
-      if (firstError) throw firstError;
-    } catch {
-      // Rollback to snapshots
-      setItems(prev =>
-        prev.map(i => {
-          const snap = snapshots.find(s => s.id === i.id);
-          return snap ?? i;
-        })
+  const bulkTag = useCallback(
+    async (ids: string[], tags: string[]) => {
+      if (ids.length === 0) return;
+      const snapshots = items.filter((i) => ids.includes(i.id));
+      setItems((prev) =>
+        prev.map((i) =>
+          ids.includes(i.id) ? { ...i, tags: Array.from(new Set([...i.tags, ...tags])) } : i
+        )
       );
-    }
-  }, [supabase, items, userId]);
+
+      try {
+        await Promise.all(
+          ids.map((id) => {
+            const item = snapshots.find((s) => s.id === id);
+            const merged = Array.from(new Set([...(item?.tags ?? []), ...tags]));
+            return fetch(`/api/saved/${id}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ tags: merged })
+            });
+          })
+        );
+      } catch {
+        setItems((prev) =>
+          prev.map((i) => {
+            const snap = snapshots.find((s) => s.id === i.id);
+            return snap ?? i;
+          })
+        );
+      }
+    },
+    [items]
+  );
 
   return { items, addItem, updateItem, deleteItem, bulkDelete, bulkTag };
 }

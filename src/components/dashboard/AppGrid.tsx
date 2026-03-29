@@ -2,19 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { BookMarked, Pencil, Check, EyeOff, Eye } from "lucide-react";
-
-const ALL_APPS = [
-  {
-    id: "saved",
-    name: "Saved",
-    description: "Нотатки, посилання, файли",
-    href: "/dashboard/saved",
-    icon: BookMarked,
-    gradient: "from-violet-500 to-blue-500",
-    glow: "shadow-violet-500/20"
-  }
-];
+import { Pencil, Check, EyeOff, Eye } from "lucide-react";
+import { ALL_APPS } from "@/lib/apps";
 
 const STORAGE_KEY = "dashboard:hidden-apps";
 

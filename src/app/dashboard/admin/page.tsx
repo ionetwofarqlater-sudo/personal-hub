@@ -1,27 +1,12 @@
-import Link from "next/link";
+import { auth } from "@/auth";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { Shield, Users, ScrollText } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
-import { getUserRole } from "@/lib/auth/roles";
 
 export default async function AdminDashboardPage() {
-  const supabase = await createClient();
-  if (!supabase) {
-    redirect("/login");
-  }
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
-  const role = await getUserRole(supabase, user.id);
-  if (role !== "admin") {
-    redirect("/403");
-  }
+  const session = await auth();
+  if (!session) redirect("/login");
+  if (session.user.role !== "admin") redirect("/403");
 
   return (
     <div className="animate-fade-in space-y-6">
@@ -36,7 +21,9 @@ export default async function AdminDashboardPage() {
             <Shield className="w-5 h-5" />
           </div>
           <h2 className="text-white font-semibold">Роль доступу</h2>
-          <p className="text-sm text-gray-400 mt-1">Поточна роль: <span className="text-violet-300 font-medium">{role}</span></p>
+          <p className="text-sm text-gray-400 mt-1">
+            Поточна роль: <span className="text-violet-300 font-medium">{session.user.role}</span>
+          </p>
         </div>
 
         <div className="rounded-2xl border border-gray-800 bg-gray-900/60 p-5">
@@ -44,7 +31,9 @@ export default async function AdminDashboardPage() {
             <Users className="w-5 h-5" />
           </div>
           <h2 className="text-white font-semibold">Користувачі</h2>
-          <p className="text-sm text-gray-400 mt-1">Базові admin-вʼю для користувачів підключимо наступним кроком.</p>
+          <p className="text-sm text-gray-400 mt-1">
+            Базові admin-в&apos;ю підключимо наступним кроком.
+          </p>
         </div>
 
         <div className="rounded-2xl border border-gray-800 bg-gray-900/60 p-5">
@@ -52,11 +41,16 @@ export default async function AdminDashboardPage() {
             <ScrollText className="w-5 h-5" />
           </div>
           <h2 className="text-white font-semibold">Аудит дій</h2>
-          <p className="text-sm text-gray-400 mt-1">Логи `admin_audit_logs` також винесемо в окрему таблицю перегляду.</p>
+          <p className="text-sm text-gray-400 mt-1">
+            Логи admin_audit_logs винесемо в окрему таблицю.
+          </p>
         </div>
       </section>
 
-      <Link href="/dashboard" className="inline-flex text-sm text-gray-400 hover:text-white transition-colors">
+      <Link
+        href="/dashboard"
+        className="inline-flex text-sm text-gray-400 hover:text-white transition-colors"
+      >
         ← Назад у Dashboard
       </Link>
     </div>

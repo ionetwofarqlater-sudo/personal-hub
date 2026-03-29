@@ -4,9 +4,8 @@ import { useState, useEffect } from "react";
 import { Zap } from "lucide-react";
 import WeatherWidget from "./WeatherWidget";
 import UserNav from "./UserNav";
-import type { User } from "@supabase/supabase-js";
+import type { Session } from "next-auth";
 import { readSettings, SETTINGS_EVENT_NAME } from "@/lib/settings";
-import { createClient } from "@/lib/supabase/client";
 
 const VERSION = process.env.NEXT_PUBLIC_APP_VERSION;
 
@@ -20,31 +19,14 @@ function VersionBadge() {
 }
 
 export default function DashboardHeader({
-  user: initialUser,
-  savedCount: initialSavedCount
+  session,
+  savedCount
 }: {
-  user: User | null;
+  session: Session;
   savedCount: number;
 }) {
   const [time, setTime] = useState("");
   const [date, setDate] = useState("");
-  const [user, setUser] = useState<User | null>(initialUser);
-  const [savedCount, setSavedCount] = useState(initialSavedCount);
-
-  // Fallback: якщо серверний user не прийшов — читаємо сесію на клієнті
-  useEffect(() => {
-    if (initialUser) return;
-    const supabase = createClient();
-    if (!supabase) return;
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) setUser(data.user);
-    });
-    supabase
-      .from("saved_items")
-      .select("*", { count: "exact", head: true })
-      .is("deleted_at", null)
-      .then(({ count }) => setSavedCount(count ?? 0));
-  }, [initialUser]);
 
   useEffect(() => {
     let activeSettings = readSettings();
@@ -101,20 +83,12 @@ export default function DashboardHeader({
 
         <div className="flex items-center gap-2 sm:gap-4">
           <WeatherWidget />
-
           <div className="hidden sm:flex flex-col items-end">
             <span className="text-white font-mono font-bold text-sm leading-none">{time}</span>
             <span className="text-gray-400 text-xs mt-0.5 capitalize">{date}</span>
           </div>
           <div className="sm:hidden text-white font-mono font-bold text-sm">{time}</div>
-
-          {user ? (
-            <UserNav user={user} savedCount={savedCount} />
-          ) : (
-            <div className="flex items-center gap-2 pl-2 sm:pl-3 border-l border-gray-800">
-              <div className="w-8 h-8 rounded-full bg-gray-700 animate-pulse" />
-            </div>
-          )}
+          <UserNav session={session} savedCount={savedCount} />
         </div>
       </div>
     </header>

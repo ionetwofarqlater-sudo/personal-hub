@@ -1,42 +1,30 @@
-import { createClient } from "@/lib/supabase/server";
+import { auth } from "@/auth";
 import { redirect } from "next/navigation";
+import { sql } from "@/lib/db";
 import SavedClient from "./SavedClient";
 import type { SavedItem } from "@/types/domain";
 
 export const metadata = { title: "Saved — Personal Hub" };
 
 export default async function SavedPage() {
-  const supabase = await createClient();
-  if (!supabase) redirect("/login");
+  const session = await auth();
+  if (!session) redirect("/login");
 
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
+  let items: SavedItem[] = [];
+  let dbError: string | null = null;
 
-  // SSR auth can fail on Vercel if cookies aren't forwarded correctly.
-  // Fall back to client-side hydration instead of hard redirect to avoid
-  // the login→dashboard redirect loop.
-  if (!user) {
-    return <SavedClient initialItems={[]} userId="" dbError={null} />;
+  try {
+    const rows = await sql`
+      SELECT * FROM saved_items
+      WHERE user_id = ${session.user.id} AND deleted_at IS NULL
+      ORDER BY is_pinned DESC, created_at DESC
+      LIMIT 100
+    `;
+    items = rows as unknown as SavedItem[];
+  } catch (e) {
+    dbError = e instanceof Error ? e.message : "DB error";
+    console.error("[SavedPage] DB error:", dbError);
   }
 
-  const { data: items, error: itemsError } = await supabase
-    .from("saved_items")
-    .select("*")
-    .eq("user_id", user.id)
-    .is("deleted_at", null)
-    .order("created_at", { ascending: false })
-    .limit(100);
-
-  if (itemsError) {
-    console.error("[SavedPage] DB error:", itemsError.message);
-  }
-
-  return (
-    <SavedClient
-      initialItems={(items ?? []) as SavedItem[]}
-      userId={user.id}
-      dbError={itemsError ? itemsError.message : null}
-    />
-  );
+  return <SavedClient initialItems={items} userId={session.user.id} dbError={dbError} />;
 }

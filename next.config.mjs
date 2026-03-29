@@ -12,14 +12,13 @@ const cspHeader = [
   "font-src 'self' data: https:",
   "style-src 'self' 'unsafe-inline'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-  "connect-src 'self' https://*.supabase.co https://api.openweathermap.org https://lh3.googleusercontent.com https://avatars.githubusercontent.com",
+  "connect-src 'self' https://api.openweathermap.org https://lh3.googleusercontent.com https://avatars.githubusercontent.com",
   "upgrade-insecure-requests"
 ].join("; ");
 
 const nextConfig = {
+  output: "standalone",
   env: {
-    NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA: process.env.VERCEL_GIT_COMMIT_SHA ?? "",
-    NEXT_PUBLIC_VERCEL_URL: process.env.VERCEL_URL ?? "",
     NEXT_PUBLIC_APP_VERSION: version
   },
   images: {
